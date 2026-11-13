@@ -15,21 +15,30 @@ jobs:
       - name: Install ImageMagick
         run: |
           sudo apt-get update
-          sudo apt-get install -y imagemagick
+          sudo apt-get install -y imagemagick file
 
-      - name: Convert ke 4K (sisi terpanjang 3840px)
+      - name: Convert semua gambar ke 4K (nama/ekstensi bebas)
         run: |
           mkdir -p output
-          shopt -s nullglob nocaseglob
-          for f in input/*.{jpg,jpeg,png,webp}; do
-            name=$(basename "${f%.*}")
-            convert "$f" \
+          i=0
+          while IFS= read -r -d '' f; do
+            # Deteksi gambar dari isi file, bukan dari nama/ekstensi
+            mime=$(file --brief --mime-type "$f")
+            case "$mime" in
+              image/*) ;;
+              *) echo "SKIP (bukan gambar): $f"; continue ;;
+            esac
+            i=$((i+1))
+            base=$(basename "$f")
+            name="${base%.*}"
+            out=$(printf "output/%04d_%s_4k.jpg" "$i" "$name")
+            convert "${f}[0]" \
+              -auto-orient \
               -filter Lanczos -resize 3840x3840 \
               -unsharp 0x1+0.7+0.02 \
               -quality 95 \
-              "output/${name}_4k.jpg"
-            echo "OK: $f"
-          done
+              "$out" && echo "OK: $f -> $out"
+          done < <(find input -type f -print0 | sort -z)
 
       - name: Upload hasil
         uses: actions/upload-artifact@v4
