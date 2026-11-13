@@ -1,0 +1,38 @@
+name: Convert foto ke 4K
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "input/**"
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ImageMagick
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick
+
+      - name: Convert ke 4K (sisi terpanjang 3840px)
+        run: |
+          mkdir -p output
+          shopt -s nullglob nocaseglob
+          for f in input/*.{jpg,jpeg,png,webp}; do
+            name=$(basename "${f%.*}")
+            convert "$f" \
+              -filter Lanczos -resize 3840x3840 \
+              -unsharp 0x1+0.7+0.02 \
+              -quality 95 \
+              "output/${name}_4k.jpg"
+            echo "OK: $f"
+          done
+
+      - name: Upload hasil
+        uses: actions/upload-artifact@v4
+        with:
+          name: foto-4k
+          path: output/
